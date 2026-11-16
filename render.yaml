@@ -2,7 +2,7 @@
 # Render → New → Blueprint → elige tu repositorio. Te pedirá los valores marcados con sync: false.
 services:
   - type: web
-    name: my-place
+    name: ourplace
     runtime: node
     plan: free
     buildCommand: npm run build
