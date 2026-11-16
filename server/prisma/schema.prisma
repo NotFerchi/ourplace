@@ -14,7 +14,7 @@ datasource db {
   // Conexión "pooled" de Neon (host con -pooler): la usa la app en ejecución
   url       = env("DATABASE_URL")
   // Conexión directa de Neon (sin -pooler): la usa Prisma Migrate
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Category {
