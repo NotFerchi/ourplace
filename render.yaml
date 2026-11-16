@@ -1,0 +1,23 @@
+# Despliegue en Render (plan gratuito): un solo servicio que sirve la API y el frontend.
+# Render → New → Blueprint → elige tu repositorio. Te pedirá los valores marcados con sync: false.
+services:
+  - type: web
+    name: my-place
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL # Neon, conexión pooled (host con -pooler)
+        sync: false
+      - key: DATABASE_URL_UNPOOLED # Neon, conexión directa (sin -pooler)
+        sync: false
+      - key: INVITE_CODE # opcional: déjalo vacío para registro abierto, o define un código para restringirlo
+        sync: false
+      - key: JWT_SECRET # lo genera Render solo
+        generateValue: true

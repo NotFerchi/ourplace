@@ -1,0 +1,2 @@
+Coloca aquí tu modelo exportado desde Blender como my-place.glb
+y activa model.enabled en client/src/config.js

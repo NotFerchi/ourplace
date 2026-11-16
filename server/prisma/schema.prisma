@@ -1,0 +1,94 @@
+// Our Place — esquema de base de datos (PostgreSQL serverless en Neon)
+// Las formas de Task y Block son las mismas que el frontend guarda hoy en
+// localStorage, así la Fase 2 solo cambia de dónde vienen los datos.
+//
+// Escrito para Prisma 6 (npm i -D prisma@6 && npm i @prisma/client@6).
+// Desde Prisma 7 la URL se mueve a prisma.config.ts; fijamos la versión en la Fase 2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Conexión "pooled" de Neon (host con -pooler): la usa la app en ejecución
+  url       = env("DATABASE_URL")
+  // Conexión directa de Neon (sin -pooler): la usa Prisma Migrate
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Category {
+  ESCUELA
+  PROYECTO
+  PERSONAL
+}
+
+enum Priority {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum BlockType {
+  CLASE
+  ESTUDIO
+  GYM
+  DESARROLLO
+  OTRO
+}
+
+// Cuenta de usuario (login). Cada tarea y bloque pertenece a un usuario.
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  tasks  Task[]
+  blocks Block[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  category    Category  @default(PERSONAL)
+  priority    Priority  @default(MEDIA)
+  dueAt       DateTime  @db.Timestamptz(3)
+  // false = "para ese día" sin hora exacta; true = entrega con hora
+  dueHasTime  Boolean   @default(false)
+  done        Boolean   @default(false)
+  completedAt DateTime? @db.Timestamptz(3)
+  // Fase 3: marca cuándo se envió la alerta por ntfy para no repetirla
+  notifiedAt  DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([userId, done, dueAt])
+  @@index([category])
+}
+
+model Block {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  type         BlockType @default(OTRO)
+  // Día del bloque en formato YYYY-MM-DD (hora local del usuario)
+  date         String    @db.VarChar(10)
+  // 0 = domingo … 6 = sábado; se usa cuando repeatWeekly es true
+  weekday      Int       @db.SmallInt
+  // Minutos desde la medianoche (ej. 7:30 → 450)
+  startMin     Int       @db.SmallInt
+  endMin       Int       @db.SmallInt
+  repeatWeekly Boolean   @default(false)
+  // Fase 3: último día (YYYY-MM-DD) en que se avisó de este bloque
+  notifiedOn   String?   @db.VarChar(10)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([userId, date])
+  @@index([repeatWeekly, weekday])
+}

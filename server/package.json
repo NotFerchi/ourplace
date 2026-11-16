@@ -1,0 +1,25 @@
+{
+  "name": "our-place-server",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": { "node": ">=20.19" },
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env --env-file-if-exists=../.env.local src/index.js",
+    "db:migrate:local": "node --env-file-if-exists=.env --env-file-if-exists=../.env.local node_modules/prisma/build/index.js migrate deploy",
+    "start": "node src/index.js",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^6.19.0",
+    "zod": "^4.1.0"
+  }
+}
