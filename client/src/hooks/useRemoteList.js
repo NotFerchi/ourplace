@@ -36,5 +36,5 @@ export function useRemoteList(path, key) {
     [refresh],
   )
 
-  return { items, itemsRef: ref, mutate }
+  return { items, itemsRef: ref, mutate, refresh }
 }

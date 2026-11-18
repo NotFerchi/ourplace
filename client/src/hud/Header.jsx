@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { Link2, LogOut } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { fmtLongDate, fmtTime, greetingFor } from '../lib/date'
 import { GLASS } from './glass'
@@ -20,7 +20,7 @@ function useOnline() {
 }
 
 /** Marca, estado de conexión, saludo según la hora, reloj y fecha. */
-export default function Header({ now }) {
+export default function Header({ now, onConnections }) {
   const online = useOnline()
   const { user, logout } = useAuth()
   const name = user?.name ? `, ${user.name}` : ''
@@ -35,10 +35,19 @@ export default function Header({ now }) {
         </span>
         <button
           type="button"
+          onClick={onConnections}
+          title="Conexiones (ClickUp…)"
+          aria-label="Conexiones con otros servicios"
+          className={`${GLASS} ml-auto flex size-8 cursor-pointer items-center justify-center rounded-full text-white/75 transition-colors [text-shadow:none] hover:text-white focus-visible:outline-2 focus-visible:outline-amber-200`}
+        >
+          <Link2 size={15} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
           onClick={logout}
           title="Cerrar sesión"
           aria-label="Cerrar sesión"
-          className={`${GLASS} ml-auto flex size-8 cursor-pointer items-center justify-center rounded-full text-white/75 transition-colors [text-shadow:none] hover:text-white focus-visible:outline-2 focus-visible:outline-amber-200`}
+          className={`${GLASS} flex size-8 cursor-pointer items-center justify-center rounded-full text-white/75 transition-colors [text-shadow:none] hover:text-white focus-visible:outline-2 focus-visible:outline-amber-200`}
         >
           <LogOut size={15} aria-hidden="true" />
         </button>

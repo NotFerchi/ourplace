@@ -6,12 +6,15 @@ import { useNow } from './hooks/useNow'
 import { useTasks } from './hooks/useTasks'
 import AgendaPanel from './hud/AgendaPanel'
 import BottomDock from './hud/BottomDock'
+import ConnectionsPanel from './hud/ConnectionsPanel'
 import { GLASS } from './hud/glass'
 import Header from './hud/Header'
 import NextUpCard from './hud/NextUpCard'
 import QuickCapture from './hud/QuickCapture'
+import TaskEditor from './hud/TaskEditor'
 import TodayPanel from './hud/TodayPanel'
 import WeekStrip from './hud/WeekStrip'
+import { dayKey } from './lib/date'
 import { splitTasks } from './lib/tasks'
 
 const isTyping = (el) => el && (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) || el.closest('form'))
@@ -21,9 +24,20 @@ const EASE = [0.2, 0.8, 0.2, 1]
 export default function App({ zen, setZen }) {
   const [filter, setFilter] = useState('ALL')
   const [captureOpen, setCaptureOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [connectionsOpen, setConnectionsOpen] = useState(false)
+  // Día que muestra la agenda (YYYY-MM-DD); null = hoy, así sigue a la fecha real a medianoche
+  const [agendaDay, setAgendaDay] = useState(null)
   const now = useNow()
-  const { tasks, addTask, toggleTask, removeTask } = useTasks()
-  const { blocks, addBlock, removeBlock } = useBlocks()
+  const { tasks, addTask, editTask, toggleTask, removeTask, refreshTasks } = useTasks()
+  const { blocks, addBlock, editBlock, skipBlockDay, removeBlock } = useBlocks()
+
+  const todayKey = dayKey(now)
+  const shownDay = agendaDay ?? todayKey
+  const selectDay = useCallback((key) => setAgendaDay(key === dayKey(new Date()) ? null : key), [])
+  const editing = editingId ? tasks.find((t) => t.id === editingId) : null
+  const closeEditor = useCallback(() => setEditingId(null), [])
+  const closeConnections = useCallback(() => setConnectionsOpen(false), [])
 
   const split = useMemo(() => splitTasks(tasks, now), [tasks, now])
   const closeCapture = useCallback(() => setCaptureOpen(false), [])
@@ -31,6 +45,10 @@ export default function App({ zen, setZen }) {
   // El listener global lee el estado más reciente sin volver a registrarse
   const captureRef = useRef(captureOpen)
   captureRef.current = captureOpen
+  const editingRef = useRef(editingId)
+  editingRef.current = editingId
+  const connectionsRef = useRef(connectionsOpen)
+  connectionsRef.current = connectionsOpen
 
   // Atajos globales: Ctrl/Cmd + K → captura rápida · Esc → Modo Zen
   useEffect(() => {
@@ -42,8 +60,12 @@ export default function App({ zen, setZen }) {
         return
       }
       if (e.key === 'Escape') {
-        // Esc primero cierra la captura o suelta el campo activo; si no, alterna el Modo Zen
-        if (captureRef.current) {
+        // Esc primero cierra el editor o la captura, o suelta el campo activo; si no, alterna el Modo Zen
+        if (editingRef.current) {
+          setEditingId(null)
+        } else if (connectionsRef.current) {
+          setConnectionsOpen(false)
+        } else if (captureRef.current) {
           setCaptureOpen(false)
         } else if (isTyping(document.activeElement)) {
           document.activeElement.blur()
@@ -58,6 +80,8 @@ export default function App({ zen, setZen }) {
 
   const enterZen = () => {
     setCaptureOpen(false)
+    setEditingId(null)
+    setConnectionsOpen(false)
     setZen(true)
   }
 
@@ -85,10 +109,17 @@ export default function App({ zen, setZen }) {
               variants={{ hidden: { opacity: 0, x: -28 }, shown: { opacity: 1, x: 0 } }}
               transition={{ duration: 0.55, ease: EASE }}
             >
-              <Header now={now} />
-              <WeekStrip now={now} tasks={tasks} />
+              <Header now={now} onConnections={() => setConnectionsOpen(true)} />
+              <WeekStrip now={now} tasks={tasks} selectedKey={shownDay} onSelect={selectDay} />
               <div className="flex h-[22rem] shrink-0 lg:h-auto lg:min-h-0 lg:flex-1 lg:shrink">
-                <TodayPanel today={split.today} upcoming={split.upcoming} filter={filter} onToggle={toggleTask} onRemove={removeTask} />
+                <TodayPanel
+                  today={split.today}
+                  upcoming={split.upcoming}
+                  filter={filter}
+                  onToggle={toggleTask}
+                  onRemove={removeTask}
+                  onEdit={setEditingId}
+                />
               </div>
             </motion.aside>
 
@@ -103,10 +134,29 @@ export default function App({ zen, setZen }) {
             >
               <NextUpCard tasks={tasks} blocks={blocks} />
               <div className="flex h-[24rem] shrink-0 lg:h-auto lg:min-h-0 lg:flex-1 lg:shrink">
-                <AgendaPanel blocks={blocks} now={now} onAdd={addBlock} onRemove={removeBlock} />
+                <AgendaPanel
+                  blocks={blocks}
+                  now={now}
+                  day={shownDay}
+                  isToday={shownDay === todayKey}
+                  onToday={() => setAgendaDay(null)}
+                  onAdd={addBlock}
+                  onEdit={editBlock}
+                  onSkip={skipBlockDay}
+                  onRemove={removeBlock}
+                />
               </div>
             </motion.aside>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {!zen && editing && (
+          <TaskEditor key={editing.id} task={editing} onSave={editTask} onRemove={removeTask} onClose={closeEditor} />
+        )}
+        {!zen && connectionsOpen && (
+          <ConnectionsPanel key="connections" onClose={closeConnections} onTasksChanged={refreshTasks} />
         )}
       </AnimatePresence>
 

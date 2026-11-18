@@ -9,5 +9,7 @@ export default defineConfig({
     open: true,
     // En local, /api se reenvía al servidor Express (npm run dev en /server)
     proxy: { '/api': 'http://localhost:3000' },
+    // La regla de recurrencia de bloques vive en ../shared (la comparte con el servidor)
+    fs: { allow: ['.', '../shared'] },
   },
 })

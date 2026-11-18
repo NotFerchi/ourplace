@@ -13,6 +13,13 @@ export const PRIORITIES = {
   BAJA: { label: 'Baja', color: '#9db3ad', weight: 2 },
 }
 
+// Origen de las tareas importadas (enum Source del schema); MANUAL no lleva chip
+export const SOURCES = {
+  CLICKUP: { label: 'ClickUp', color: '#c3a6ff' },
+  CLASSROOM: { label: 'Classroom', color: '#8fd19e' },
+  TEAMS: { label: 'Teams', color: '#7cc4ff' },
+}
+
 export const BLOCK_TYPES = {
   CLASE: { label: 'Clase', color: '#7cc4ff', icon: GraduationCap },
   ESTUDIO: { label: 'Estudio', color: '#ffb454', icon: BookOpen },
