@@ -6,8 +6,11 @@ const LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 const monthFmt = new Intl.DateTimeFormat('es-MX', { month: 'long' })
 
-/** Semana en curso (lunes a domingo). El punto marca días con tareas pendientes. */
-export default function WeekStrip({ now, tasks }) {
+/**
+ * Semana en curso (lunes a domingo). El punto marca días con tareas pendientes.
+ * Al pulsar un día, la agenda muestra ese día.
+ */
+export default function WeekStrip({ now, tasks, selectedKey, onSelect }) {
   const days = useMemo(() => {
     const today = startOfDay(now)
     const monday = addDays(today, -((today.getDay() + 6) % 7))
@@ -40,23 +43,29 @@ export default function WeekStrip({ now, tasks }) {
       </div>
       <ol className="grid grid-cols-7 gap-1">
         {days.map((d) => (
-          <li
-            key={d.key}
-            className="flex flex-col items-center gap-1"
-            aria-current={d.isToday ? 'date' : undefined}
-            aria-label={`${d.name} ${d.number}${d.pending ? `, ${d.pending} pendientes` : ''}`}
-          >
-            <span className={`text-[0.7rem] ${d.isToday ? 'font-semibold text-amber-300' : 'text-white/60'}`}>{d.letter}</span>
-            <span
-              className={`grid size-8 place-items-center rounded-full text-[0.82rem] tabular-nums ${
-                d.isToday
-                  ? 'bg-amber-400 font-semibold text-stone-950 shadow-[0_0_18px_rgba(251,191,36,0.55)]'
-                  : `border border-white/15 ${d.isPast ? 'text-white/45' : 'text-white/90'}`
-              }`}
+          <li key={d.key}>
+            <button
+              type="button"
+              onClick={() => onSelect(d.key)}
+              aria-pressed={d.key === selectedKey}
+              aria-current={d.isToday ? 'date' : undefined}
+              aria-label={`Ver agenda del ${d.name} ${d.number}${d.pending ? `, ${d.pending} pendientes` : ''}`}
+              className="group flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl"
             >
-              {d.number}
-            </span>
-            <span className={`size-1 rounded-full ${d.pending ? (d.isToday ? 'bg-amber-300' : 'bg-white/70') : 'bg-transparent'}`} />
+              <span className={`text-[0.7rem] ${d.isToday ? 'font-semibold text-amber-300' : 'text-white/60'}`}>{d.letter}</span>
+              <span
+                className={`grid size-8 place-items-center rounded-full text-[0.82rem] tabular-nums transition-colors ${
+                  d.isToday
+                    ? 'bg-amber-400 font-semibold text-stone-950 shadow-[0_0_18px_rgba(251,191,36,0.55)]'
+                    : `border ${d.isPast ? 'text-white/45' : 'text-white/90'} ${
+                        d.key === selectedKey ? 'border-amber-300 bg-amber-300/20 text-white' : 'border-white/15 group-hover:border-white/40'
+                      }`
+                }`}
+              >
+                {d.number}
+              </span>
+              <span className={`size-1 rounded-full ${d.pending ? (d.isToday ? 'bg-amber-300' : 'bg-white/70') : 'bg-transparent'}`} />
+            </button>
           </li>
         ))}
       </ol>

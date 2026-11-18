@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CornerDownLeft, Plus } from 'lucide-react'
+import { ChevronDown, CornerDownLeft, Plus, StickyNote } from 'lucide-react'
 import { CATEGORIES, PRIORITIES } from '../lib/constants'
 import { addDays, endOfDay, toLocalInputValue } from '../lib/date'
+import Chip from './Chip'
 import { GLASS_DEEP } from './glass'
 
 const WHEN = [
@@ -10,24 +11,6 @@ const WHEN = [
   { id: 'tomorrow', label: 'Mañana' },
   { id: 'custom', label: 'Fecha y hora' },
 ]
-
-function Chip({ active, color, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.8rem] transition-colors"
-      style={
-        active
-          ? { borderColor: color, background: `${color}33`, color: '#fff' }
-          : { borderColor: 'rgb(255 255 255 / 0.18)', color: 'rgb(255 255 255 / 0.75)' }
-      }
-    >
-      {children}
-    </button>
-  )
-}
 
 /**
  * Captura rápida: escribe, elige categoría / prioridad / fecha y presiona Enter.
@@ -39,6 +22,8 @@ export default function QuickCapture({ onAdd, onClose }) {
   const [priority, setPriority] = useState('MEDIA')
   const [when, setWhen] = useState('today')
   const [custom, setCustom] = useState('')
+  const [notes, setNotes] = useState('')
+  const [notesOpen, setNotesOpen] = useState(false)
   const [saved, setSaved] = useState(0)
   const input = useRef(null)
   const root = useRef(null)
@@ -58,9 +43,12 @@ export default function QuickCapture({ onAdd, onClose }) {
   // Tras elegir una opción el foco vuelve al texto, para seguir escribiendo o dar Enter
   const refocus = () => input.current?.focus()
 
-  // Enter sobre un chip envía la tarea en lugar de volver a pulsar el chip
+  // Enter sobre un chip o en las notas envía la tarea (Shift + Enter hace salto de línea en las notas)
   const onKeyDown = (e) => {
-    if (e.key === 'Enter' && e.target.tagName === 'BUTTON' && e.target.type === 'button') {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+    const onChip = e.target.tagName === 'BUTTON' && e.target.type === 'button'
+    const inNotes = e.target.tagName === 'TEXTAREA' && !e.shiftKey
+    if (onChip || inNotes) {
       e.preventDefault()
       root.current?.requestSubmit()
     }
@@ -90,8 +78,10 @@ export default function QuickCapture({ onAdd, onClose }) {
       dueHasTime = true
     }
 
-    onAdd({ title, category, priority, dueAt: dueAt.toISOString(), dueHasTime })
+    onAdd({ title, notes, category, priority, dueAt: dueAt.toISOString(), dueHasTime })
     setTitle('')
+    setNotes('')
+    setNotesOpen(false)
     setWhen('today')
     setSaved((n) => n + 1)
     input.current?.focus()
@@ -169,6 +159,32 @@ export default function QuickCapture({ onAdd, onClose }) {
             />
           )}
         </fieldset>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setNotesOpen((v) => !v)}
+            aria-expanded={notesOpen}
+            aria-controls="capture-notes"
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg text-[0.8rem] text-white/65 transition-colors hover:text-white"
+          >
+            <StickyNote size={13} aria-hidden="true" className={notes.trim() ? 'text-amber-300' : ''} />
+            Notas
+            <ChevronDown size={13} className={`transition-transform ${notesOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+          </button>
+          {notesOpen && (
+            <textarea
+              id="capture-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Detalles, enlaces… (opcional)"
+              aria-label="Notas de la tarea"
+              maxLength={2000}
+              rows={3}
+              className="thin-scroll mt-1.5 w-full resize-none rounded-xl border border-white/18 bg-white/[0.07] px-2.5 py-1.5 text-[0.84rem] text-white placeholder:text-white/45"
+            />
+          )}
+        </div>
 
         <p className="text-xs text-white/55" aria-live="polite">
           {saved > 0 ? `${saved === 1 ? '1 tarea agregada' : `${saved} tareas agregadas`}. ` : ''}

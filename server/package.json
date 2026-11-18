@@ -8,6 +8,7 @@
     "dev": "node --watch --env-file-if-exists=.env --env-file-if-exists=../.env.local src/index.js",
     "db:migrate:local": "node --env-file-if-exists=.env --env-file-if-exists=../.env.local node_modules/prisma/build/index.js migrate deploy",
     "start": "node src/index.js",
+    "test": "node --test --experimental-test-module-mocks \"test/**/*.test.js\"",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate"
   },

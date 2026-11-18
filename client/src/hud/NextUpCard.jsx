@@ -3,7 +3,7 @@ import { Hourglass, Play, Timer } from 'lucide-react'
 import { blocksForDate } from '../hooks/useBlocks'
 import { useNow } from '../hooks/useNow'
 import { BLOCK_TYPES, CATEGORIES } from '../lib/constants'
-import { fmtShortDate, fmtTime, minToTimeStr, minutesOfDay, startOfDay } from '../lib/date'
+import { dayKey, fmtShortDate, fmtTime, minToTimeStr, minutesOfDay, startOfDay } from '../lib/date'
 
 const atMinutes = (now, min) => new Date(startOfDay(now).getTime() + min * 60000)
 const pad = (n) => String(n).padStart(2, '0')
@@ -16,7 +16,7 @@ const pad = (n) => String(n).padStart(2, '0')
  */
 function pickNext(tasks, blocks, now) {
   const nowMin = minutesOfDay(now)
-  const todays = blocksForDate(blocks, now)
+  const todays = blocksForDate(blocks, dayKey(now))
 
   const active = todays.find((b) => b.startMin <= nowMin && nowMin < b.endMin)
   if (active) {

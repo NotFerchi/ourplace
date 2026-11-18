@@ -29,6 +29,21 @@ enum Priority {
   BAJA
 }
 
+// De dónde viene una tarea: creada en la app o importada de un servicio
+enum Source {
+  MANUAL
+  CLICKUP
+  CLASSROOM
+  TEAMS
+}
+
+// Servicios externos que se pueden conectar
+enum Provider {
+  CLICKUP
+  CLASSROOM
+  TEAMS
+}
+
 enum BlockType {
   CLASE
   ESTUDIO
@@ -45,8 +60,9 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
 
-  tasks  Task[]
-  blocks Block[]
+  tasks        Task[]
+  blocks       Block[]
+  integrations Integration[]
 }
 
 model Task {
@@ -54,6 +70,8 @@ model Task {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
+  // Notas libres (máx. 2000 caracteres, lo valida la API)
+  notes       String?   @db.Text
   category    Category  @default(PERSONAL)
   priority    Priority  @default(MEDIA)
   dueAt       DateTime  @db.Timestamptz(3)
@@ -65,9 +83,34 @@ model Task {
   notifiedAt  DateTime? @db.Timestamptz(3)
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  // Importación: origen, id en el origen y enlace para abrirla allá
+  source      Source    @default(MANUAL)
+  externalId  String?
+  externalUrl String?
 
+  @@unique([userId, source, externalId])
   @@index([userId, done, dueAt])
   @@index([category])
+}
+
+// Conexión de un usuario con un servicio externo. Los tokens van cifrados
+// (AES-256-GCM con TOKEN_ENC_KEY) y nunca salen del servidor.
+model Integration {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        Provider
+  tokenEnc        String
+  refreshTokenEnc String?
+  expiresAt       DateTime? @db.Timestamptz(3)
+  // Ajustes de la conexión, p. ej. { "category": "PROYECTO" }
+  config          Json?
+  lastSyncAt      DateTime? @db.Timestamptz(3)
+  lastError       String?
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@unique([userId, provider])
 }
 
 model Block {
@@ -76,13 +119,21 @@ model Block {
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title        String
   type         BlockType @default(OTRO)
-  // Día del bloque en formato YYYY-MM-DD (hora local del usuario)
+  // Día del bloque en formato YYYY-MM-DD (hora local del usuario).
+  // En una serie es el primer día; la regla vive en shared/schedule.js
   date         String    @db.VarChar(10)
-  // 0 = domingo … 6 = sábado; se usa cuando repeatWeekly es true
-  weekday      Int       @db.SmallInt
+  // 0 = domingo … 6 = sábado; vacío = solo el día de `date`
+  weekdays     Int[]     @default([])
+  // Último día de la serie (YYYY-MM-DD, opcional)
+  rangeEnd     String?   @db.VarChar(10)
+  // Fechas YYYY-MM-DD excluidas de la serie
+  skipDates    String[]  @default([])
   // Minutos desde la medianoche (ej. 7:30 → 450)
   startMin     Int       @db.SmallInt
   endMin       Int       @db.SmallInt
+  // Compatibilidad (antes de `weekdays`): el servidor los mantiene derivados
+  // weekday = día de la semana de `date`; repeatWeekly = weekdays no vacío
+  weekday      Int       @db.SmallInt
   repeatWeekly Boolean   @default(false)
   // Fase 3: último día (YYYY-MM-DD) en que se avisó de este bloque
   notifiedOn   String?   @db.VarChar(10)

@@ -13,7 +13,7 @@ neon env pull               # o `neon deploy`; requiere `neon login`
 
 # 1) Servidor
 cd server
-cp .env.example .env        # un JWT_SECRET y, si quieres, un INVITE_CODE
+cp .env.example .env        # un JWT_SECRET, una TOKEN_ENC_KEY y, si quieres, un INVITE_CODE
 npm install
 npm run db:migrate:local    # crea las tablas
 npm run dev                 # http://localhost:3000
@@ -34,7 +34,10 @@ Un solo servicio de Render sirve la API y el frontend; Neon guarda los datos.
    la **pooled** (host con `-pooler`) y la **directa** (sin `-pooler`).
 2. **Código en GitHub.** Sube la carpeta a un repositorio **privado** (`.env` ya está en `.gitignore`).
 3. **Render.** En render.com: *New → Blueprint* → elige el repositorio. Lee `render.yaml` y te pide:
-   `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (directa) e `INVITE_CODE` (opcional).
+   `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (directa), `TOKEN_ENC_KEY` e `INVITE_CODE` (opcional).
+   `TOKEN_ENC_KEY` cifra los tokens de los servicios conectados; sin ella el servidor no arranca. Genérala con
+   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` y guárdala: si la cambias,
+   hay que volver a conectar cada servicio.
    `JWT_SECRET` lo genera solo. Pulsa *Apply*; el primer despliegue tarda unos minutos y
    crea las tablas solo (`prisma migrate deploy` corre al arrancar).
    `INVITE_CODE` es opcional: si lo dejas vacío, **cualquiera con la URL puede crear una cuenta**;
@@ -52,6 +55,20 @@ Para actualizar, haz `git push`: Render vuelve a desplegar.
   cada 10 minutos desde cron-job.org o UptimeRobot lo mantiene despierto.
 - Neon también se suspende cuando no se usa y despierta solo en menos de un segundo.
 - La sesión dura 30 días en una cookie `httpOnly`. Las contraseñas se guardan con bcrypt.
+
+## Conexiones (importar tareas)
+
+El botón de enlace junto a *Cerrar sesión* abre **Conexiones**. Por ahora: **ClickUp**.
+
+1. En ClickUp: avatar → *Settings* → *Apps* → *API Token* (empieza con `pk_`).
+2. Pégalo en Conexiones → *Conectar*. Se guarda cifrado (AES-256-GCM con `TOKEN_ENC_KEY`) y no vuelve al navegador.
+3. Se importan las tareas abiertas que tienes asignadas, con su fecha, descripción y enlace. Categoría: *Proyecto*
+   (se cambia en la conexión).
+
+La importación es de solo lectura: lo que cambies aquí no cambia en ClickUp, y la siguiente sincronización
+vuelve a traer título, notas y fecha desde allá. Lo que marques como hecho aquí no se reabre. Si una tarea
+desaparece de ClickUp no se borra; solo deja de actualizarse. Al desconectar puedes borrar las importadas.
+Las pruebas del servidor (`npm test` en `server/`, Node 22.3+) usan un ClickUp simulado y no tocan la base.
 
 ## Atajos
 
@@ -106,7 +123,10 @@ our-place/
 │   ├── .env.example
 │   ├── prisma/schema.prisma     User, Task y Block para Neon
 │   ├── prisma/migrations/       0001_init: crea todas las tablas
-│   └── src/                     index.js, auth.js, routes/{auth,tasks,blocks}.js
+│   ├── src/                     index.js (arranque), app.js, auth.js, crypto.js (tokens cifrados)
+│   │   ├── routes/              auth, tasks, blocks, integrations
+│   │   └── integrations/        conectores (clickup.js) y sync.js
+│   └── test/                    npm test: sincronización con ClickUp simulado
 ├── render.yaml                  Despliegue en Render (plan gratis)
 └── package.json                 Scripts raíz que usa Render (build / start)
 ```

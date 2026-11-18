@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronDown, Trash2 } from 'lucide-react'
-import { CATEGORIES, PRIORITIES } from '../lib/constants'
+import { Check, ChevronDown, ExternalLink, Pencil, StickyNote, Trash2 } from 'lucide-react'
+import { CATEGORIES, PRIORITIES, SOURCES } from '../lib/constants'
 import { fmtShortDate, fmtTime } from '../lib/date'
 import { CARD } from './glass'
+import LinkedText from './LinkedText'
 
 function dueLabel(task, showDate) {
   const due = new Date(task.dueAt)
@@ -12,9 +13,11 @@ function dueLabel(task, showDate) {
   return task.dueHasTime ? fmtTime(due) : null
 }
 
-function TaskItem({ task, onToggle, onRemove, showDate = false }) {
+function TaskItem({ task, onToggle, onRemove, onEdit, showDate = false }) {
+  const [notesOpen, setNotesOpen] = useState(false)
   const cat = CATEGORIES[task.category]
   const pri = PRIORITIES[task.priority]
+  const source = SOURCES[task.source]
   const due = dueLabel(task, showDate)
 
   return (
@@ -40,9 +43,16 @@ function TaskItem({ task, onToggle, onRemove, showDate = false }) {
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className={`text-[0.9rem] leading-snug break-words ${task.done ? 'text-white/45 line-through' : 'text-white'}`}>
+        <button
+          type="button"
+          onClick={() => onEdit(task.id)}
+          title="Editar tarea"
+          className={`cursor-pointer text-left text-[0.9rem] leading-snug break-words transition-colors hover:text-amber-200 ${
+            task.done ? 'text-white/45 line-through' : 'text-white'
+          }`}
+        >
           {task.title}
-        </p>
+        </button>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2.5 text-xs text-white/65">
           <span className="flex items-center gap-1">
             <span className="size-1.5 rounded-full" style={{ background: cat.color }} aria-hidden="true" />
@@ -50,9 +60,54 @@ function TaskItem({ task, onToggle, onRemove, showDate = false }) {
           </span>
           {!task.done && <span style={{ color: pri.color }}>{pri.label}</span>}
           {due && !task.done && <span className={task.overdue ? 'text-rose-300' : ''}>{due}</span>}
+          {source && (
+            <span
+              className="rounded-full border px-1.5 text-[0.66rem] leading-relaxed"
+              style={{ borderColor: `${source.color}80`, color: source.color }}
+              title={`Importada de ${source.label}`}
+            >
+              {source.label}
+            </span>
+          )}
+          {source && task.externalUrl && (
+            <a
+              href={task.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded transition-colors hover:text-white"
+            >
+              <ExternalLink size={11} aria-hidden="true" />
+              Abrir en {source.label}
+            </a>
+          )}
+          {task.notes && (
+            <button
+              type="button"
+              onClick={() => setNotesOpen((v) => !v)}
+              aria-expanded={notesOpen}
+              aria-label={notesOpen ? 'Ocultar notas' : 'Ver notas'}
+              className={`flex cursor-pointer items-center gap-1 rounded transition-colors hover:text-white ${notesOpen ? 'text-amber-300' : ''}`}
+            >
+              <StickyNote size={11} aria-hidden="true" />
+              Notas
+            </button>
+          )}
         </p>
+        {task.notes && notesOpen && (
+          <p className="mt-1 text-[0.8rem] leading-relaxed whitespace-pre-wrap break-words text-white/80">
+            <LinkedText text={task.notes} />
+          </p>
+        )}
       </div>
 
+      <button
+        type="button"
+        onClick={() => onEdit(task.id)}
+        aria-label={`Editar "${task.title}"`}
+        className="mt-0.5 cursor-pointer rounded-md p-1 text-white/45 opacity-70 transition hover:text-amber-300 focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+      >
+        <Pencil size={13} aria-hidden="true" />
+      </button>
       <button
         type="button"
         onClick={() => onRemove(task.id)}
@@ -66,7 +121,7 @@ function TaskItem({ task, onToggle, onRemove, showDate = false }) {
 }
 
 /** Tareas de hoy: progreso, lista compacta y próximas entregas. El filtro vive en el dock. */
-export default function TodayPanel({ today, upcoming, filter, onToggle, onRemove }) {
+export default function TodayPanel({ today, upcoming, filter, onToggle, onRemove, onEdit }) {
   const [showUpcoming, setShowUpcoming] = useState(false)
 
   const matches = (t) => filter === 'ALL' || t.category === filter
@@ -115,7 +170,7 @@ export default function TodayPanel({ today, upcoming, filter, onToggle, onRemove
           <ul>
             <AnimatePresence initial={false}>
               {visible.map((t) => (
-                <TaskItem key={t.id} task={t} onToggle={onToggle} onRemove={onRemove} />
+                <TaskItem key={t.id} task={t} onToggle={onToggle} onRemove={onRemove} onEdit={onEdit} />
               ))}
             </AnimatePresence>
           </ul>
@@ -136,7 +191,7 @@ export default function TodayPanel({ today, upcoming, filter, onToggle, onRemove
               <ul>
                 <AnimatePresence initial={false}>
                   {visibleUpcoming.map((t) => (
-                    <TaskItem key={t.id} task={t} onToggle={onToggle} onRemove={onRemove} showDate />
+                    <TaskItem key={t.id} task={t} onToggle={onToggle} onRemove={onRemove} onEdit={onEdit} showDate />
                   ))}
                 </AnimatePresence>
               </ul>

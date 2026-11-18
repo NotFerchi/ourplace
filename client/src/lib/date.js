@@ -2,7 +2,13 @@ const pad = (n) => String(n).padStart(2, '0')
 
 export const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-export const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
+/** Fecha local (medianoche) a partir de una clave YYYY-MM-DD. */
+export const fromDayKey = (key) => {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+export const startOfDay =(d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
 export const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 export const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes())
 
@@ -25,6 +31,24 @@ export const timeStrToMin = (s) => {
 export const minToTimeStr = (min) => `${pad(Math.floor(min / 60) % 24)}:${pad(min % 60)}`
 
 export const minutesOfDay = (d) => d.getHours() * 60 + d.getMinutes()
+
+const relFmt = new Intl.RelativeTimeFormat('es-MX', { numeric: 'auto' })
+const REL_STEPS = [
+  ['year', 31536000],
+  ['month', 2592000],
+  ['day', 86400],
+  ['hour', 3600],
+  ['minute', 60],
+]
+
+/** "hace 5 minutos", "ayer"… (menos de un minuto: "justo ahora"). */
+export function fmtAgo(date, now = new Date()) {
+  const secs = Math.round((new Date(date) - now) / 1000)
+  for (const [unit, size] of REL_STEPS) {
+    if (Math.abs(secs) >= size) return relFmt.format(Math.round(secs / size), unit)
+  }
+  return 'justo ahora'
+}
 
 export function greetingFor(d) {
   const h = d.getHours()

@@ -21,3 +21,5 @@ services:
         sync: false
       - key: JWT_SECRET # lo genera Render solo
         generateValue: true
+      - key: TOKEN_ENC_KEY # cifra los tokens de ClickUp, etc. 64 caracteres hex (ver README); sin ella no arranca
+        sync: false
